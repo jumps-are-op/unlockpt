@@ -1,0 +1,38 @@
+Unlockpt  Grant and unlock stdin PTY
+
+Have you ever thought, "how does a terminal tell a process that its output
+is to a terminal"?
+In POSIX(R) C99, there are 3 functions to make it happen *magically*.
+1. posix_openpt -> Open a new `terminal` file (can be locked or ungranted).
+2. grantpt -> Grant the file descriptor it's proper permissions,
+	this function is for backward compatibility.
+3. unlockpt -> Unlock the file descriptor for slaves (i.e. other processes).
+3. ptsname -> Get the file name for slaves to use.
+
+The `posix_openpt` exist only as an implementation-equivalent for:
+master = open("/dev/ptmx", oflags);
+if(master < 0)
+	return -1;
+
+When a process opens the `/dev/ptmx` magic file, the kernel gives the process
+a new *special* file descriptor, when a process (other than
+the original process who opened the `/dev/ptmx` file) tries to read from it,
+it will think it's reading from a terminal!
+
+With this information,
+you can trick any process to think it's reading from a terminal.
+But why you need an entire utility for this?
+Have you ever thought about shell scripts? How will they unlock and grant
+the master file for slaves to read?
+
+You can replace `posix_openpt` with `exec 3<>/dev/ptmx` and now
+your shell have the file descriptor 3 open to
+a locked and ungranted terminal file descriptor.
+To unlock and grant a terminal file for slaves,
+you *need* to grant it with `grantpt`, unlock it with `unlockpt`,
+and get the new file name with `ptsname`.
+This is the only reason I created this utility.
+
+I needed to simulate a terminal in a shell script.
+If you asked what that shell script is,
+it's a VI (not Vim, just VI) wrapper for the Workman layout. Weird ain't it?
